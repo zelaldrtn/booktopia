@@ -1,2 +1,2 @@
-# bookish
+# booktopia
 Akıllı kitap okuma asistanı
