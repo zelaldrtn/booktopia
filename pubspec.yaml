@@ -27,7 +27,8 @@ environment:
 # dependencies can be manually updated by changing the version numbers below to
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
-dependencies:
+
+dependencies: #normal çalılma için
   flutter:
     sdk: flutter
   flutter_localizations:
@@ -42,7 +43,7 @@ dependencies:
   share_plus: ^13.3.1
   path_provider: ^2.1.6
 
-dev_dependencies:
+dev_dependencies: #geliştirme için
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
