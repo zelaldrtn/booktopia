@@ -15,6 +15,7 @@ class ThemeController {
   ThemeMode get currentMode => themeModeNotifier.value;
   bool get isDarkMode => themeModeNotifier.value == ThemeMode.dark;
 
+  //uygulama açılırken kayıtlı tercih okunuyor. daha önce seçilen tema uygulanıyor.
   Future<void> init() async {
     try {
       final prefs = await SharedPreferences.getInstance();
