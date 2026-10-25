@@ -9,8 +9,19 @@ external void _booktopiaStopAudio(JSString id);
 @JS('booktopiaSetAudioVolume')
 external void _booktopiaSetAudioVolume(JSString id, JSNumber volume);
 
+@JS('booktopiaIsAudioSupported')
+external JSBoolean _booktopiaIsAudioSupported();
+
 /// Web implementation of AmbientAudioPlatform calling Web Audio API via modern JS interop.
 class AmbientAudioPlatform {
+  static bool get isSupported {
+    try {
+      return _booktopiaIsAudioSupported().toDart;
+    } catch (_) {
+      return true;
+    }
+  }
+
   static void play(String id, double volume) {
     try {
       _booktopiaPlayAudio(id.toJS, volume.toJS);

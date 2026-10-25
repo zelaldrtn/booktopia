@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/localization/app_locale_controller.dart';
 import '../../../core/services/supabase_service.dart';
@@ -6,6 +7,7 @@ import '../../../core/theme/theme_colors.dart';
 import '../../../core/theme/theme_controller.dart';
 import '../../book_library/controller/book_library_controller.dart';
 import '../../quote_studio/models/quote.dart';
+import '../../quote_studio/view/quote_studio_view.dart';
 import '../../statistics/controller/statistics_controller.dart';
 import '../controller/profile_controller.dart';
 
@@ -93,6 +95,8 @@ class ProfileTabView extends StatelessWidget {
                     const SizedBox(height: 20),
                     _buildBadgesCarousel(context),
                     const SizedBox(height: 20),
+                    _buildQuoteStudioQuickCard(context),
+                    const SizedBox(height: 20),
                     _buildSavedQuotesSection(context),
                     const SizedBox(height: 20),
                     _buildSettingsSection(context),
@@ -147,31 +151,90 @@ class ProfileTabView extends StatelessWidget {
         children: [
           Row(
             children: [
-              Stack(
-                alignment: Alignment.bottomRight,
-                children: [
-                  CircleAvatar(
-                    radius: 34,
-                    backgroundColor: context.containerBg,
-                    child: Icon(
-                      Icons.person,
-                      size: 40,
-                      color: context.headlineColor,
+              GestureDetector(
+                onTap: profileController.isUploadingAvatar
+                    ? null
+                    : () => _handleAvatarTap(context),
+                child: Stack(
+                  alignment: Alignment.bottomRight,
+                  children: [
+                    Container(
+                      width: 68,
+                      height: 68,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: context.containerBg,
+                        border: Border.all(
+                          color: AppColors.secondary.withValues(alpha: 0.6),
+                          width: 2,
+                        ),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          if (profile?.avatarUrl != null &&
+                              profile!.avatarUrl!.isNotEmpty)
+                            Image.network(
+                              profile.avatarUrl!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Icon(
+                                Icons.person,
+                                size: 40,
+                                color: context.headlineColor,
+                              ),
+                              loadingBuilder: (ctx, child, progress) {
+                                if (progress == null) return child;
+                                return Center(
+                                  child: CircularProgressIndicator(
+                                    value: progress.expectedTotalBytes != null
+                                        ? progress.cumulativeBytesLoaded /
+                                            progress.expectedTotalBytes!
+                                        : null,
+                                    strokeWidth: 2,
+                                    color: AppColors.secondary,
+                                  ),
+                                );
+                              },
+                            )
+                          else
+                            Icon(
+                              Icons.person,
+                              size: 40,
+                              color: context.headlineColor,
+                            ),
+                          if (profileController.isUploadingAvatar)
+                            Container(
+                              color: Colors.black.withValues(alpha: 0.5),
+                              child: const Center(
+                                child: SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      color: AppColors.secondary,
-                      shape: BoxShape.circle,
+                    Container(
+                      padding: const EdgeInsets.all(5),
+                      decoration: BoxDecoration(
+                        color: AppColors.secondary,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: context.cardBg, width: 2),
+                      ),
+                      child: const Icon(
+                        Icons.camera_alt,
+                        size: 13,
+                        color: Colors.white,
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.auto_stories,
-                      size: 14,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -619,9 +682,31 @@ class ProfileTabView extends StatelessWidget {
               ],
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.error),
-            onPressed: () => _deleteQuote(context, quote.id),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.palette_outlined, size: 18, color: AppColors.secondary),
+                tooltip: AppLocaleController.instance.isTurkish
+                    ? 'Quote Studio ile Aç'
+                    : 'Open in Quote Studio',
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => QuoteStudioView(
+                        initialQuote: quote,
+                        bookController: bookController,
+                        onQuoteSaved: () => profileController.fetchProfileData(),
+                      ),
+                    ),
+                  );
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.error),
+                onPressed: () => _deleteQuote(context, quote.id),
+              ),
+            ],
           ),
         ],
       ),
@@ -974,5 +1059,416 @@ class ProfileTabView extends StatelessWidget {
         ),
       );
     }
+  }
+
+  Future<void> _handleAvatarTap(BuildContext context) async {
+    final loc = AppLocaleController.instance;
+    final profile = profileController.profile;
+    final hasAvatar = profile?.avatarUrl != null && profile!.avatarUrl!.isNotEmpty;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: context.cardBg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (modalCtx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: modalCtx.borderColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Text(
+                  loc.isTurkish ? 'Profil Fotoğrafı' : 'Profile Photo',
+                  style: Theme.of(modalCtx).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: modalCtx.headlineColor,
+                      ),
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  leading: const CircleAvatar(
+                    backgroundColor: AppColors.secondaryFixed,
+                    child: Icon(Icons.photo_library, color: AppColors.secondary),
+                  ),
+                  title: Text(
+                    loc.isTurkish ? 'Galeriden Fotoğraf Seç' : 'Choose from Gallery',
+                    style: TextStyle(
+                      color: modalCtx.headlineColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  onTap: () async {
+                    Navigator.of(modalCtx).pop();
+                    await _pickAndUploadPhoto(context);
+                  },
+                ),
+                if (hasAvatar)
+                  ListTile(
+                    leading: const CircleAvatar(
+                      backgroundColor: Color(0xFFFFDAD6),
+                      child: Icon(Icons.delete_outline, color: AppColors.error),
+                    ),
+                    title: Text(
+                      loc.isTurkish ? 'Fotoğrafı Kaldır' : 'Remove Photo',
+                      style: const TextStyle(
+                        color: AppColors.error,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    onTap: () async {
+                      Navigator.of(modalCtx).pop();
+                      await _removePhoto(context);
+                    },
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _pickAndUploadPhoto(BuildContext context) async {
+    final loc = AppLocaleController.instance;
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+
+      if (pickedFile == null) {
+        // Kullanıcı seçimi iptal etti, hiçbir hata fırlatmadan dön
+        return;
+      }
+
+      final bytes = await pickedFile.readAsBytes();
+      final ext = pickedFile.name.contains('.')
+          ? pickedFile.name.split('.').last
+          : 'png';
+
+      final success = await profileController.uploadProfilePhoto(
+        bytes: bytes,
+        fileExtension: ext,
+      );
+
+      if (context.mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                loc.isTurkish
+                    ? 'Profil fotoğrafınız başarıyla güncellendi.'
+                    : 'Profile photo updated successfully.',
+              ),
+              backgroundColor: AppColors.secondary,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                profileController.errorMessage ??
+                    (loc.isTurkish
+                        ? 'Profil fotoğrafı yüklenemedi.'
+                        : 'Failed to upload profile photo.'),
+              ),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${loc.isTurkish ? "Hata" : "Error"}: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _removePhoto(BuildContext context) async {
+    final loc = AppLocaleController.instance;
+    final success = await profileController.removeProfilePhoto();
+    if (context.mounted) {
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              loc.isTurkish
+                  ? 'Profil fotoğrafınız kaldırıldı.'
+                  : 'Profile photo removed.',
+            ),
+            backgroundColor: AppColors.secondary,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              profileController.errorMessage ??
+                  (loc.isTurkish
+                      ? 'Fotoğraf kaldırılırken hata oluştu.'
+                      : 'Failed to remove photo.'),
+            ),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildQuoteStudioQuickCard(BuildContext context) {
+    final loc = AppLocaleController.instance;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: context.cardBg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: context.borderColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: context.isDark ? 0.2 : 0.04),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        children: [
+          Positioned(
+            bottom: -20,
+            right: -20,
+            width: 100,
+            height: 100,
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.secondaryFixed.withValues(alpha: 0.4),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: AppColors.secondaryFixed,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.palette_outlined,
+                        color: AppColors.secondary,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                'Quote Studio',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  fontFamily: 'Newsreader',
+                                  color: context.headlineColor,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppColors.secondaryFixed,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  loc.isTurkish ? 'Yaratıcı' : 'Creative',
+                                  style: const TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.secondary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            loc.isTurkish
+                                ? 'Favori alıntılarını Instagram hikayeleri ve poster formatında estetik görsellere dönüştür.'
+                                : 'Turn your favorite book quotes into aesthetic posters and stories.',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                              height: 1.3,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+
+                // Stitch Tasarımındaki Mini Önizleme Şablonları Minyatürü
+                Row(
+                  children: [
+                    _buildMiniTemplateCard(
+                      bg: const Color(0xFFF7F3EB),
+                      border: const Color(0xFF4A1521),
+                      quote: loc.isTurkish ? '"Kitap bir limandır..."' : '"Books are a haven..."',
+                      textColor: const Color(0xFF4A1521),
+                      footer: 'VINTAGE',
+                    ),
+                    const SizedBox(width: 8),
+                    _buildMiniTemplateCard(
+                      bg: const Color(0xFF4A1521),
+                      border: const Color(0xFFFFB4AB),
+                      quote: loc.isTurkish ? '"Ruhun derinliği..."' : '"Depths of soul..."',
+                      textColor: const Color(0xFFFFB4AB),
+                      footer: 'BOOKTOPIA',
+                    ),
+                    const SizedBox(width: 8),
+                    _buildMiniTemplateCard(
+                      bg: const Color(0xFFDCE4D6),
+                      border: const Color(0xFF07372D),
+                      quote: loc.isTurkish ? '"Sessiz akşam..."' : '"Quiet dusk..."',
+                      textColor: const Color(0xFF07372D),
+                      footer: 'SAGE',
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                // Yeni Alıntı Tasarla Butonu
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => QuoteStudioView(
+                            bookController: bookController,
+                            onQuoteSaved: () => profileController.fetchProfileData(),
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.brush, size: 16),
+                    label: Text(
+                      loc.isTurkish ? 'Yeni Alıntı Tasarla' : 'Design New Quote',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.secondary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 11),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMiniTemplateCard({
+    required Color bg,
+    required Color border,
+    required String quote,
+    required Color textColor,
+    required String footer,
+  }) {
+    return Expanded(
+      child: Container(
+        height: 64,
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: border.withValues(alpha: 0.3)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 4,
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Align(
+              alignment: Alignment.topLeft,
+              child: Container(
+                width: 10,
+                height: 2,
+                decoration: BoxDecoration(
+                  color: textColor.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(1),
+                ),
+              ),
+            ),
+            Text(
+              quote,
+              maxLines: 2,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 8,
+                fontStyle: FontStyle.italic,
+                fontWeight: FontWeight.bold,
+                color: textColor,
+                height: 1.1,
+              ),
+            ),
+            Align(
+              alignment: Alignment.bottomRight,
+              child: Text(
+                footer,
+                style: TextStyle(
+                  fontSize: 6,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1,
+                  color: textColor.withValues(alpha: 0.7),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

@@ -4,6 +4,7 @@ import '../../../core/localization/app_locale_controller.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../book_library/controller/book_library_controller.dart';
 import '../../book_library/models/book.dart';
+import '../../quote_studio/view/quote_studio_view.dart';
 import '../../statistics/controller/statistics_controller.dart';
 import '../controller/reading_corner_controller.dart';
 
@@ -706,18 +707,67 @@ class _ReadingCornerTabViewState extends State<ReadingCornerTabView> {
                 ),
               ],
             ),
-            Text(
-              AppLocaleController.instance
-                  .t('active_count')
-                  .replaceAll('{count}', '$activeCount'),
-              style: const TextStyle(
-                fontSize: 12,
-                color: AppColors.textSecondary,
-                fontWeight: FontWeight.w600,
-              ),
+            Row(
+              children: [
+                if (activeCount > 0) ...[
+                  TextButton.icon(
+                    onPressed: () => widget.cornerController.stopAllSounds(),
+                    icon: const Icon(Icons.stop_circle_outlined, size: 14, color: AppColors.error),
+                    label: Text(
+                      AppLocaleController.instance.isTurkish ? 'Tümünü Durdur' : 'Stop All',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.error,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                Text(
+                  AppLocaleController.instance
+                      .t('active_count')
+                      .replaceAll('{count}', '$activeCount'),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
+        if (!widget.cornerController.isAudioSupported) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.terracotta.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.terracotta.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline, size: 16, color: AppColors.terracotta),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    AppLocaleController.instance.isTurkish
+                        ? 'Ambiyans sesleri web tarayıcısında (Chrome vb.) stüdyo ses motoruyla dinlenebilir.'
+                        : 'Ambient sounds are played via the high-fidelity sound engine on supported platforms.',
+                    style: const TextStyle(fontSize: 11, color: AppColors.terracotta),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
         const SizedBox(height: 12),
         GridView.builder(
           physics: const NeverScrollableScrollPhysics(),
@@ -783,7 +833,7 @@ class _ReadingCornerTabViewState extends State<ReadingCornerTabView> {
                   size: 20,
                   color: sound.isActive ? AppColors.secondary : AppColors.textSecondary,
                 ),
-                onPressed: () => widget.cornerController.toggleSound(sound.id),
+                onPressed: () => _handleSoundToggle(sound),
               ),
             ],
           ),
@@ -875,9 +925,31 @@ class _ReadingCornerTabViewState extends State<ReadingCornerTabView> {
                   ),
                 ],
               ),
-              Text(
-                AppLocaleController.instance.t('quick_note_sub'),
-                style: const TextStyle(fontSize: 11, color: AppColors.secondary, fontWeight: FontWeight.bold),
+              TextButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => QuoteStudioView(
+                        initialBook: widget.cornerController.selectedBook,
+                        bookController: widget.bookController,
+                      ),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.palette_outlined, size: 14, color: AppColors.secondary),
+                label: Text(
+                  AppLocaleController.instance.isTurkish ? 'Quote Studio' : 'Quote Studio',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.secondary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
               ),
             ],
           ),
@@ -992,5 +1064,23 @@ class _ReadingCornerTabViewState extends State<ReadingCornerTabView> {
         ],
       ),
     );
+  }
+
+  void _handleSoundToggle(AmbientSoundState sound) {
+    if (!widget.cornerController.isAudioSupported) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocaleController.instance.isTurkish
+                ? 'Bu platformda ses çalma desteklenmiyor.'
+                : 'Audio playback is not supported on this platform.',
+          ),
+          backgroundColor: AppColors.terracotta,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+    widget.cornerController.toggleSound(sound.id);
   }
 }

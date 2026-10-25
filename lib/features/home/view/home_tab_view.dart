@@ -10,6 +10,8 @@ import '../../book_library/view/book_detail_view.dart';
 import '../../book_library/widget/add_edit_book_dialog.dart';
 import '../../book_library/widget/book_cover.dart';
 import '../../profile/controller/profile_controller.dart';
+import '../../quote_studio/models/quote.dart';
+import '../../quote_studio/view/quote_studio_view.dart';
 import '../../statistics/controller/statistics_controller.dart';
 
 /// Booktopia Ana Sayfa Sekmesi.
@@ -149,11 +151,18 @@ class HomeTabView extends StatelessWidget {
             child: CircleAvatar(
               radius: 14,
               backgroundColor: context.containerBg,
-              child: Icon(
-                Icons.person,
-                size: 18,
-                color: context.headlineColor,
-              ),
+              backgroundImage: profileController.profile?.avatarUrl != null &&
+                      profileController.profile!.avatarUrl!.isNotEmpty
+                  ? NetworkImage(profileController.profile!.avatarUrl!)
+                  : null,
+              child: profileController.profile?.avatarUrl == null ||
+                      profileController.profile!.avatarUrl!.isEmpty
+                  ? Icon(
+                      Icons.person,
+                      size: 18,
+                      color: context.headlineColor,
+                    )
+                  : null,
             ),
           ),
         ),
@@ -732,29 +741,65 @@ class HomeTabView extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              onPressed: () {
-                Clipboard.setData(ClipboardData(text: '$quoteStr $authorStr'));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(loc.t('quote_copied')),
-                    backgroundColor: AppColors.deepForest,
-                    duration: const Duration(seconds: 2),
-                  ),
-                );
-              },
-              icon: Icon(Icons.share, size: 16, color: context.headlineColor),
-              label: Text(
-                loc.t('share_copy'),
-                style: TextStyle(
-                  color: context.headlineColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => QuoteStudioView(
+                        initialQuote: Quote(
+                          id: 'daily_quote',
+                          userId: '',
+                          quoteText: loc.isTurkish
+                              ? 'Bir kitap okuyan insan, ölmeden önce binlerce hayat yaşar. Hiç okumayan insan ise sadece tek bir hayat sürer.'
+                              : 'A reader lives a thousand lives before he dies. The man who never reads lives only one.',
+                          author: 'George R.R. Martin',
+                          bookTitle: loc.isTurkish
+                              ? 'Ejderhaların Dansı'
+                              : 'A Dance with Dragons',
+                        ),
+                        bookController: bookController,
+                        onQuoteSaved: () => profileController.fetchProfileData(),
+                      ),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.palette_outlined, size: 15, color: AppColors.secondary),
+                label: Text(
+                  loc.isTurkish ? "Quote Studio'da Aç" : 'Open in Quote Studio',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.secondary,
+                  side: BorderSide(color: AppColors.secondary.withValues(alpha: 0.5)),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 ),
               ),
-            ),
+              const SizedBox(width: 8),
+              TextButton.icon(
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: '$quoteStr $authorStr'));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(loc.t('quote_copied')),
+                      backgroundColor: AppColors.deepForest,
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                },
+                icon: Icon(Icons.share, size: 16, color: context.headlineColor),
+                label: Text(
+                  loc.t('share_copy'),
+                  style: TextStyle(
+                    color: context.headlineColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

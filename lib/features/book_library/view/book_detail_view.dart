@@ -3,6 +3,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../quote_studio/models/quote.dart';
+import '../../quote_studio/view/quote_studio_view.dart';
 import '../controller/book_library_controller.dart';
 import '../models/book.dart';
 import '../widget/add_edit_book_dialog.dart';
@@ -594,6 +595,40 @@ class _BookDetailViewState extends State<BookDetailView> {
           label: const Text(
             'Odaklanma Sayacını Başlat (+25 dk)',
             style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
+        const SizedBox(height: 10),
+        OutlinedButton(
+          onPressed: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => QuoteStudioView(
+                  initialBook: _book,
+                  bookController: widget.controller,
+                ),
+              ),
+            );
+          },
+          style: OutlinedButton.styleFrom(
+            backgroundColor: context.cardBg,
+            foregroundColor: AppColors.secondary,
+            side: BorderSide(color: context.borderColor),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            minimumSize: const Size.fromHeight(46),
+          ),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.palette_outlined, size: 20, color: AppColors.secondary),
+              SizedBox(width: 8),
+              Text(
+                'Quote Studio ile Alıntı Tasarla',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              ),
+              Spacer(),
+              Icon(Icons.arrow_forward, size: 16, color: AppColors.textSecondary),
+            ],
           ),
         ),
       ],

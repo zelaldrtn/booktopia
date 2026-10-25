@@ -8,6 +8,9 @@ class AmbientAudioService {
   AmbientAudioService._();
   static final AmbientAudioService instance = AmbientAudioService._();
 
+  /// Ortamın ses motorunu destekleyip desteklemediğini kontrol eder.
+  bool get isSupported => AmbientAudioPlatform.isSupported;
+
   /// Sesi başlatır. [volume] 0 ile 100 arasında bir değerdir.
   void play(String id, int volume) {
     AmbientAudioPlatform.play(id, (volume / 100.0).clamp(0.0, 1.0));

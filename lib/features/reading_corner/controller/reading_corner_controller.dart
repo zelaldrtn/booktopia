@@ -153,18 +153,35 @@ class ReadingCornerController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void toggleSound(String id) {
+  /// Ambiyans ses motorunun desteklenip desteklenmediğini bildirir
+  bool get isAudioSupported => AmbientAudioService.instance.isSupported;
+
+  /// Ambiyans sesini açar veya kapatır.
+  /// Aynı anda birden fazla sesin istenmeden çalmasını engellemek için,
+  /// yeni bir ses etkinleştirildiğinde çalan diğer tüm sesler otomatik olarak durdurulur.
+  bool toggleSound(String id) {
     final index = _ambientSounds.indexWhere((s) => s.id == id);
     if (index != -1) {
       final sound = _ambientSounds[index];
-      sound.isActive = !sound.isActive;
-      if (sound.isActive) {
+      final willBeActive = !sound.isActive;
+
+      if (willBeActive) {
+        for (final s in _ambientSounds) {
+          if (s.id != id && s.isActive) {
+            s.isActive = false;
+            AmbientAudioService.instance.stop(s.id);
+          }
+        }
+        sound.isActive = true;
         AmbientAudioService.instance.play(id, sound.volume);
       } else {
+        sound.isActive = false;
         AmbientAudioService.instance.stop(id);
       }
       notifyListeners();
+      return sound.isActive;
     }
+    return false;
   }
 
   void setSoundVolume(String id, int volume) {

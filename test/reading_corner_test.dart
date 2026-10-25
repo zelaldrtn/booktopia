@@ -48,6 +48,23 @@ void main() {
       expect(controller.activeSoundCount, equals(0));
     });
 
+    test('activating a sound deactivates other sounds to prevent unwanted overlap', () {
+      controller.toggleSound('rain');
+      expect(controller.ambientSounds.firstWhere((s) => s.id == 'rain').isActive, isTrue);
+      expect(controller.activeSoundCount, equals(1));
+
+      // Şömine açıldığında yağmur otomatik durmalı
+      controller.toggleSound('fireplace');
+      expect(controller.ambientSounds.firstWhere((s) => s.id == 'rain').isActive, isFalse);
+      expect(controller.ambientSounds.firstWhere((s) => s.id == 'fireplace').isActive, isTrue);
+      expect(controller.activeSoundCount, equals(1));
+
+      // Tümünü durdur
+      controller.stopAllSounds();
+      expect(controller.activeSoundCount, equals(0));
+      expect(controller.ambientSounds.every((s) => !s.isActive), isTrue);
+    });
+
     test('selectBook updates selected book accurately', () {
       const book = Book(
         id: 'b1',
