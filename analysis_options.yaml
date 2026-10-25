@@ -10,8 +10,8 @@
 include: package:flutter_lints/flutter.yaml
 
 analyzer:
-  exclude:
-    - build/**
+  exclude: #analiz dışında tutulacak klasörler
+    - build/** #build klasörü ve içindeki dosyalaar.
     - android/**
     - ios/**
     - web/**
