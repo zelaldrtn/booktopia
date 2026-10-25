@@ -1,3 +1,4 @@
+//koşullu import: web ortamında web diğer ortamlarda stub.
 import 'ambient_audio_stub.dart'
     if (dart.library.html) 'ambient_audio_web.dart';
 
