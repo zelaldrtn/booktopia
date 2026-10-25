@@ -3,6 +3,8 @@ import 'package:booktopia/features/reading_corner/controller/reading_corner_cont
 import 'package:booktopia/features/book_library/models/book.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('ReadingCornerController Tests', () {
     late ReadingCornerController controller;
 

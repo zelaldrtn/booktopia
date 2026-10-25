@@ -34,9 +34,19 @@ class AmbientAudioPlatform {
     } catch (_) {}
   }
 
+  static void pause(String id) {
+    stop(id);
+  }
+
   static void setVolume(String id, double volume) {
     try {
       _booktopiaSetAudioVolume(id.toJS, volume.toJS);
     } catch (_) {}
+  }
+
+  static void stopAll() {
+    for (final id in ['rain', 'fireplace', 'library', 'cafe']) {
+      stop(id);
+    }
   }
 }
