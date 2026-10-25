@@ -1,4 +1,4 @@
-#gerekli dosyaları içe aktarma
+//gerekli dosyaları içe aktarma
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/localization/app_locale_controller.dart';
